@@ -1,0 +1,110 @@
+name: Wake sleeping demos
+
+# Liegt im oeffentlichen Repo sebastians-spielwiese/demo-watch (dort sind Actions-Minuten kostenlos). Vorlage: demo-watch der Hauptseite.
+# Die Cloud laesst Demos auch nach einem Besuch wieder einschlafen (Messung 2026-11-05: ein Drittel der Demos, der Besuch des grossen Laufs
+# "Keep demos awake" setzt die Frist nicht verlaesslich zurueck). Dieser Lauf prueft deshalb per Health-Abfrage (weckt nichts, ~20 s),
+# welche Demos schlafen, und besucht nur diese im Browser.
+# GitHub startet geplante Laeufe unzuverlaessig (2026-11-05: von 14:21 bis 21:02 UTC kein einziger, 352 Demos schliefen). Deshalb ist der Lauf
+# eine Schleife: ein Lauf arbeitet 4,5 Stunden lang alle 5 Minuten (nach einer Welle alle 2) und startet am Ende den naechsten selbst (workflow_dispatch mit dem
+# GITHUB_TOKEN loest, anders als andere Ereignisse, einen Lauf aus). Der Zeitplan startet ihn stuendlich neu, falls die Kette einmal abreisst;
+# ein zweiter Lauf wartet dank concurrency, bis der laufende fertig ist. Anhalten: den Workflow in den Actions-Einstellungen deaktivieren
+# (ein einzelner Lauf ist nur abgebrochen, der Zeitplan startet ihn dann zur naechsten vollen Stunde neu).
+
+on:
+  schedule:
+    # Reserve, falls die Kette abreisst (Minute 7: zur vollen Stunde lässt GitHub geplante Läufe eher aus)
+    - cron: "7 * * * *"
+  workflow_dispatch:
+
+# Eigene Gruppe: der grosse Lauf dauert Stunden und soll diesen nicht aufhalten. Ein noch laufender Lauf wird nicht abgebrochen,
+# der naechste wartet (GitHub behaelt von mehreren wartenden nur den neuesten).
+concurrency:
+  group: wake-sleepers
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  actions: write   # fuer den Neustart am Ende des Laufs (gh workflow run)
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    # 270 Minuten Schleife + hoechstens ein Durchgang (Zeitbudget 40 Minuten) + Einrichtung; das Limit gehosteter Laeufe sind 360 Minuten
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Install Playwright package
+        run: npm install playwright@1.62.1
+      - name: Cache Chromium binary
+        id: cache-chromium
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-1.62.1
+      - name: Install Chromium
+        if: steps.cache-chromium.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+      - name: Wake sleeping demos (alle 5 Minuten, 4,5 Stunden)
+        id: loop
+        shell: bash
+        env:
+          KEEP_ALIVE_ONLY_ASLEEP: "1"
+          # Die beiden Demos der Spielwiese; neue Demos hier und in der Liste DEMO_URLS von keep-alive.mjs eintragen
+          KEEP_ALIVE_URLS: "https://spielwiese-figurenwert.streamlit.app/,https://spielwiese-taktik-muster.streamlit.app/"
+          # Je Durchgang nach 40 Minuten keine neuen Demos mehr beginnen (bei 350 schlafenden Demos reichen ~30 Minuten); der naechste Durchgang macht weiter
+          KEEP_ALIVE_BUDGET_MIN: "15"
+          # Besuche im ersten Durchgang gleichzeitig (Standard 4): ein Kaltstart besteht fast nur aus Warten auf die Cloud. Lokal gemessen
+          # 2026-11-06: 11 Schlafende mit 10 gleichzeitigen Besuchen in 98 s, alle OK; mit 4 brauchte eine Welle von 150 etwa 40 Minuten.
+          KEEP_ALIVE_CONCURRENCY: "2"
+        run: |
+          END=$((SECONDS + 270 * 60))
+          i=0
+          rc=0
+          while true; do
+            i=$((i + 1))
+            echo "=== Durchgang $i, $(date -u +%H:%M:%S) UTC ==="
+            set +e
+            node .github/scripts/keep-alive.mjs 2>&1 | tee keep-alive.log
+            rc=${PIPESTATUS[0]}
+            set -e
+            [ "$rc" -eq 0 ] || echo "=== Durchgang $i endete mit Fehler (Exit $rc) ==="
+            # Pause: nach einem Durchgang mit Schlafenden nur 2 Minuten (die Welle ist meist noch nicht vorbei, und was zwischenzeitlich
+            # einschlaeft, wird gleich nachgeholt), sonst 5 Minuten. Reicht die Zeit nicht mehr fuer Pause und Durchgang, Schluss.
+            if grep -q "Keine schlafende Demo" keep-alive.log; then PAUSE=300; else PAUSE=120; fi
+            [ $((SECONDS + PAUSE)) -lt "$END" ] || break
+            sleep "$PAUSE"
+          done
+          # der Zustand des letzten Durchgangs entscheidet ueber das Issue (keep-alive.log wird je Durchgang neu geschrieben)
+          exit "$rc"
+
+      - name: Betroffene Demos für das Issue zusammenstellen
+        if: always()
+        run: |
+          if [ -f keep-alive.log ]; then
+            grep '^FAIL ' keep-alive.log | tac | awk '!seen[$2]++' | tac \
+              | sed -E 's#https://spielwiese-##; s#\.streamlit\.app/##' | cut -c1-220 > keep-alive-details.txt || true
+          fi
+          touch keep-alive-details.txt
+
+      # Naechsten Lauf selbst starten, damit die Kette nicht von GitHubs Zeitplan abhaengt. Nicht nach einem manuellen Abbruch (cancelled)
+      # und nicht, wenn die Schleife gar nicht lief (Einrichtung gescheitert; dann startet der Zeitplan den Lauf wieder, kein Dauerfeuer).
+      - name: Naechsten Lauf starten
+        if: ${{ !cancelled() && steps.loop.outcome != 'skipped' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run wake-sleepers.yml --repo "$GITHUB_REPOSITORY" --ref "${{ github.ref_name }}"
+
+      # Eigener Titel: sonst wuerde ein gruener Weck-Lauf das Issue des grossen Laufs schliessen (und umgekehrt)
+      - name: Bei Fehler Issue anlegen, bei Erfolg schließen
+        if: always()
+        uses: ./.github/actions/alert
+        with:
+          title: "Weck-Lauf: schlafende Demo nicht geweckt"
+          status: ${{ job.status }}
+          token: ${{ github.token }}
+          details-file: keep-alive-details.txt

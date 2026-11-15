@@ -1,0 +1,73 @@
+name: Keep demos awake
+
+# Liegt im oeffentlichen Repo sebastians-spielwiese/demo-watch (öffentliche Repos haben kostenlose Actions-Minuten). Vorlage: demo-watch der Hauptseite, hier auf die
+# Demos der Spielwiese zugeschnitten (wenige Apps, daher kurze Läufe).
+on:
+  schedule:
+    # alle 6 Stunden zur Minute 17 (nicht zur vollen Stunde: dort lässt GitHub geplante Läufe eher aus). Sicherheitsnetz neben dem Workflow
+    # "Wake sleeping demos" (alle 30 Minuten, weckt nur die schlafenden): GitHub lässt geplante Läufe gelegentlich ganz aus
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+# Läufe nacheinander statt überlappend: ein Kaltstart-Lauf dauert über 2 Stunden und würde sonst mit dem nächsten dieselben Demos aufwecken
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  visit-demos:
+    runs-on: ubuntu-latest
+    # Ein Lauf, in dem beide Demos schlafen, braucht wenige Minuten
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Install Playwright package
+        run: npm install playwright@1.62.1
+      - name: Cache Chromium binary
+        id: cache-chromium
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-1.62.1
+      # Deliberately skipping "--with-deps"/"install-deps" (the apt-get step)
+      # here: ubuntu-latest ships most of Chromium's required shared libs
+      # already, and that apt step was the remaining slow part every run
+      # regardless of the binary cache. If chromium.launch() starts failing
+      # with a missing-library error in the next run's log, that's the
+      # signal this bet didn't pay off and install-deps needs to come back.
+      - name: Install Chromium
+        if: steps.cache-chromium.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+      - name: Visit every demo
+        # tee behält das Protokoll für das Issue (bash läuft mit pipefail: ein Fehlschlag des Skripts bleibt einer)
+        env:
+          # Die beiden Demos der Spielwiese; neue Demos hier und in der Liste DEMO_URLS von keep-alive.mjs eintragen
+          KEEP_ALIVE_URLS: "https://spielwiese-figurenwert.streamlit.app/,https://spielwiese-taktik-muster.streamlit.app/"
+          KEEP_ALIVE_BUDGET_MIN: "30"
+        run: node .github/scripts/keep-alive.mjs 2>&1 | tee keep-alive.log
+
+      - name: Betroffene Demos für das Issue zusammenstellen
+        if: always()
+        run: |
+          # je Adresse die letzte FAIL-Zeile (die Wiederholungsdurchgänge schreiben sie mehrfach), ohne Präfix und Suffix der Adresse
+          if [ -f keep-alive.log ]; then
+            grep '^FAIL ' keep-alive.log | tac | awk '!seen[$2]++' | tac \
+              | sed -E 's#https://spielwiese-##; s#\.streamlit\.app/##' | cut -c1-220 > keep-alive-details.txt || true
+          fi
+          touch keep-alive-details.txt
+
+      - name: Bei Fehler Issue anlegen, bei Erfolg schließen
+        if: always()
+        uses: ./.github/actions/alert
+        with:
+          title: "Keep-alive: Demo nicht erreichbar"
+          status: ${{ job.status }}
+          token: ${{ github.token }}
+          details-file: keep-alive-details.txt
