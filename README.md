@@ -2,7 +2,7 @@
 
 Geplante Prüfläufe für die Demos auf [sebastians-spielwiese.net](https://sebastians-spielwiese.net). Das Repo ist öffentlich, weil die
 GitHub-Actions-Minuten dort kostenlos sind; es enthält keinen eigenen Code außer dem Besuchsskript. Es ist die kleine Schwester von
-`demo-watch` der Hauptseite (gleiche Skripte und Workflows, zugeschnitten auf zwei Apps). Die Streamlit Community Cloud lässt Apps ohne
+`demo-watch` der Hauptseite (gleiche Skripte und Workflows, zugeschnitten auf drei Apps). Die Streamlit Community Cloud lässt Apps ohne
 Besuch einschlafen; diese Läufe öffnen sie in einem echten Headless-Browser und melden Apps, die zwar laden, aber im Skript abgestürzt sind.
 
 | Workflow | Zeitplan | Was er tut |
@@ -18,6 +18,7 @@ Ein Fehlschlag legt ein Issue an (nur eines je Fehlerbild); es schließt sich, s
 
 - <https://spielwiese-figurenwert.streamlit.app/>
 - <https://spielwiese-taktik-muster.streamlit.app/>
+- <https://spielwiese-partieformular.streamlit.app/>
 
 GitHub deaktiviert geplante Workflows in öffentlichen Repos nach 60 Tagen ohne Aktivität im Repo. Die selbstfortsetzende Kette zählt dabei nicht
 immer als Aktivität; erscheint ein Hinweis auf eine Deaktivierung, die Workflows in den Actions-Einstellungen wieder einschalten.

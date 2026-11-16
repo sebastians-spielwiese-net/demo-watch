@@ -49,7 +49,7 @@ jobs:
         # tee behält das Protokoll für das Issue (bash läuft mit pipefail: ein Fehlschlag des Skripts bleibt einer)
         env:
           # Die beiden Demos der Spielwiese; neue Demos hier und in der Liste DEMO_URLS von keep-alive.mjs eintragen
-          KEEP_ALIVE_URLS: "https://spielwiese-figurenwert.streamlit.app/,https://spielwiese-taktik-muster.streamlit.app/"
+          KEEP_ALIVE_URLS: "https://spielwiese-figurenwert.streamlit.app/,https://spielwiese-taktik-muster.streamlit.app/,https://spielwiese-partieformular.streamlit.app/"
           KEEP_ALIVE_BUDGET_MIN: "30"
         run: node .github/scripts/keep-alive.mjs 2>&1 | tee keep-alive.log
 
