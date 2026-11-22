@@ -1,6 +1,6 @@
 name: Wake sleeping demos
 
-# Liegt im oeffentlichen Repo sebastians-spielwiese/demo-watch (dort sind Actions-Minuten kostenlos). Vorlage: demo-watch der Hauptseite.
+# Liegt im oeffentlichen Repo sebastians-spielwiese-net/demo-watch (dort sind Actions-Minuten kostenlos). Vorlage: demo-watch der Hauptseite.
 # Die Cloud laesst Demos auch nach einem Besuch wieder einschlafen (Messung 2026-11-05: ein Drittel der Demos, der Besuch des grossen Laufs
 # "Keep demos awake" setzt die Frist nicht verlaesslich zurueck). Dieser Lauf prueft deshalb per Health-Abfrage (weckt nichts, ~20 s),
 # welche Demos schlafen, und besucht nur diese im Browser.

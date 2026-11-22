@@ -1,6 +1,6 @@
 name: Keep demos awake
 
-# Liegt im oeffentlichen Repo sebastians-spielwiese/demo-watch (öffentliche Repos haben kostenlose Actions-Minuten). Vorlage: demo-watch der Hauptseite, hier auf die
+# Liegt im oeffentlichen Repo sebastians-spielwiese-net/demo-watch (öffentliche Repos haben kostenlose Actions-Minuten). Vorlage: demo-watch der Hauptseite, hier auf die
 # Demos der Spielwiese zugeschnitten (wenige Apps, daher kurze Läufe).
 on:
   schedule:
