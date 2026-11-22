@@ -7,9 +7,9 @@ import { writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 
 const DEMO_URLS = [
-  "https://spielwiese-figurenwert.streamlit.app/",
-  "https://spielwiese-taktik-muster.streamlit.app/",
-  "https://spielwiese-partieformular.streamlit.app/",
+  "https://spielwiese-figurenwert-demo.streamlit.app/",
+  "https://spielwiese-taktik-muster-demo.streamlit.app/",
+  "https://spielwiese-partieformular-demo.streamlit.app/",
 ];
 
 // KEEP_ALIVE_ONLY=multicriteria,raptor node .github/scripts/keep-alive.mjs visits just the matching demos (local check).

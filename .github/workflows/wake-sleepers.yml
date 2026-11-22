@@ -54,7 +54,7 @@ jobs:
         env:
           KEEP_ALIVE_ONLY_ASLEEP: "1"
           # Die beiden Demos der Spielwiese; neue Demos hier und in der Liste DEMO_URLS von keep-alive.mjs eintragen
-          KEEP_ALIVE_URLS: "https://spielwiese-figurenwert.streamlit.app/,https://spielwiese-taktik-muster.streamlit.app/,https://spielwiese-partieformular.streamlit.app/"
+          KEEP_ALIVE_URLS: "https://spielwiese-figurenwert-demo.streamlit.app/,https://spielwiese-taktik-muster-demo.streamlit.app/,https://spielwiese-partieformular-demo.streamlit.app/"
           # Je Durchgang nach 40 Minuten keine neuen Demos mehr beginnen (bei 350 schlafenden Demos reichen ~30 Minuten); der naechste Durchgang macht weiter
           KEEP_ALIVE_BUDGET_MIN: "15"
           # Besuche im ersten Durchgang gleichzeitig (Standard 4): ein Kaltstart besteht fast nur aus Warten auf die Cloud. Lokal gemessen

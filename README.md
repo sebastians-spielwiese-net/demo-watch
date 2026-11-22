@@ -16,9 +16,9 @@ Ein Fehlschlag legt ein Issue an (nur eines je Fehlerbild); es schließt sich, s
 
 **Aktuelle Demos:**
 
-- <https://spielwiese-figurenwert.streamlit.app/>
-- <https://spielwiese-taktik-muster.streamlit.app/>
-- <https://spielwiese-partieformular.streamlit.app/>
+- <https://spielwiese-figurenwert-demo.streamlit.app/>
+- <https://spielwiese-taktik-muster-demo.streamlit.app/>
+- <https://spielwiese-partieformular-demo.streamlit.app/>
 
 GitHub deaktiviert geplante Workflows in öffentlichen Repos nach 60 Tagen ohne Aktivität im Repo. Die selbstfortsetzende Kette zählt dabei nicht
 immer als Aktivität; erscheint ein Hinweis auf eine Deaktivierung, die Workflows in den Actions-Einstellungen wieder einschalten.
